@@ -123,12 +123,6 @@ go run cmd/with_deadline/main.go  # context.WithDeadline() を使った Ticker
 8. **複数の `Ticker` を `context` で管理し、一括停止できるようにする**
 9. **`context.WithDeadline()` を使い、特定の時刻で `context` をキャンセルする**
 
-## 今後の発展
-
-- 遅い処理がある場合の `Ticker` の tick の取り扱いを調査。
-- `context.Context` を使用して Ticker を適切に制御する。
-- `context.WithDeadline()` を用いた制御の応用を試す。
-
 ## 作成者
 
 - **池田虎太郎** | [GitHub プロフィール](https://github.com/kotaroikeda-apl-dev)
