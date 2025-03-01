@@ -18,43 +18,12 @@
 - **`return` の影響**: `defer` は関数終了前に必ず実行されることを確認。
 - **`context.WithTimeout()` の活用**: 指定時間後に自動で `context` をキャンセル。
 - **`context.WithCancel()` の活用**: 外部のイベントで `context` を手動キャンセル。
+- **複数の `Ticker` を `context` で制御**: 複数の `Ticker` を一括管理する。
+- **`context.WithDeadline()` の活用**: 指定時刻になったら `context` をキャンセル。
 
 ## コードサンプル
 
-### **基本の Ticker**
-
-```go
-package main
-
-import (
-	"fmt"
-	"time"
-)
-
-func main() {
-	fmt.Println("Tickerのサンプルを開始")
-
-	// 1秒ごとにTickを送るTickerを作成
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop() // 関数終了時にTickerを停止
-
-	// 5秒後にTickerを停止するタイマー
-	stopTimer := time.After(5 * time.Second)
-
-	for {
-		select {
-		case t := <-ticker.C:
-			fmt.Println("Tick at:", t)
-		case <-stopTimer:
-			fmt.Println("Tickerを停止します...")
-			return // `main()` を終了
-		}
-	}
-}
-```
-
-### **`context.WithTimeout()` を使った Ticker の停止**
-
+### **複数の Ticker を `context` で制御**
 ```go
 package main
 
@@ -65,9 +34,54 @@ import (
 )
 
 func main() {
-	fmt.Println("Ticker with context timeout started")
+	fmt.Println("Multiple Tickers with Context")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// 2つの Ticker を作成
+	ticker1 := time.NewTicker(1 * time.Second)
+	ticker2 := time.NewTicker(2 * time.Second)
+	defer ticker1.Stop()
+	defer ticker2.Stop()
+
+	// 5秒後にキャンセル
+	go func() {
+		time.Sleep(5 * time.Second)
+		fmt.Println("Cancelling context...")
+		cancel()
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("Context cancelled. Stopping all tickers...")
+			return
+		case t := <-ticker1.C:
+			fmt.Println("Ticker1 at:", t)
+		case t := <-ticker2.C:
+			fmt.Println("Ticker2 at:", t)
+		}
+	}
+}
+```
+
+### **`context.WithDeadline()` を使った Ticker の停止**
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"time"
+)
+
+func main() {
+	fmt.Println("Ticker with context deadline started")
+
+	// 今から 5 秒後の時刻を取得
+	deadline := time.Now().Add(5 * time.Second)
+	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()
 
 	ticker := time.NewTicker(1 * time.Second)
@@ -76,44 +90,7 @@ func main() {
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("Timeout reached. Stopping ticker...")
-			return
-		case t := <-ticker.C:
-			fmt.Println("Tick at:", t)
-		}
-	}
-}
-```
-
-### **`context.WithCancel()` を使った手動停止**
-
-```go
-package main
-
-import (
-	"context"
-	"fmt"
-	"time"
-)
-
-func main() {
-	fmt.Println("Ticker with context cancellation started")
-
-	ctx, cancel := context.WithCancel(context.Background())
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
-	// 3秒後にキャンセルを実行
-	go func() {
-		time.Sleep(3 * time.Second)
-		fmt.Println("Cancelling context...")
-		cancel()
-	}()
-
-	for {
-		select {
-		case <-ctx.Done():
-			fmt.Println("Context cancelled. Stopping ticker...")
+			fmt.Println("Deadline reached. Stopping ticker...")
 			return
 		case t := <-ticker.C:
 			fmt.Println("Tick at:", t)
@@ -127,9 +104,11 @@ func main() {
 ### コードを実行する
 
 ```sh
-go run cmd/basic/main.go        # 基本のTicker
-go run cmd/with_timeout/main.go  # context.WithTimeout() を使ったTicker
-go run cmd/with_cancel/main.go   # context.WithCancel() を使ったTicker
+go run cmd/basic/main.go        # 基本の Ticker
+go run cmd/with_timeout/main.go  # context.WithTimeout() を使った Ticker
+go run cmd/with_cancel/main.go   # context.WithCancel() を使った Ticker
+go run cmd/multiple_tickers/main.go  # 複数の Ticker を context で制御
+go run cmd/with_deadline/main.go  # context.WithDeadline() を使った Ticker
 ```
 
 ## 学習ポイント
@@ -141,14 +120,16 @@ go run cmd/with_cancel/main.go   # context.WithCancel() を使ったTicker
 5. **`context.WithTimeout()` を使うと指定時間後に自動で `context` をキャンセルできる**
 6. **`context.WithCancel()` は外部イベントによって手動で `context` をキャンセルできる**
 7. **`defer cancel()` を忘れずに呼ぶことで、適切に `context` のリソースを解放できる**
+8. **複数の `Ticker` を `context` で管理し、一括停止できるようにする**
+9. **`context.WithDeadline()` を使い、特定の時刻で `context` をキャンセルする**
 
 ## 今後の発展
 
-- 複数の `Ticker` を並行処理で動作させる実験。
 - 遅い処理がある場合の `Ticker` の tick の取り扱いを調査。
 - `context.Context` を使用して Ticker を適切に制御する。
-- `context.WithDeadline()` を用いた制御を試す。
+- `context.WithDeadline()` を用いた制御の応用を試す。
 
 ## 作成者
 
 - **池田虎太郎** | [GitHub プロフィール](https://github.com/kotaroikeda-apl-dev)
+
