@@ -20,84 +20,7 @@
 - **`context.WithCancel()` の活用**: 外部のイベントで `context` を手動キャンセル。
 - **複数の `Ticker` を `context` で制御**: 複数の `Ticker` を一括管理する。
 - **`context.WithDeadline()` の活用**: 指定時刻になったら `context` をキャンセル。
-
-## コードサンプル
-
-### **複数の Ticker を `context` で制御**
-```go
-package main
-
-import (
-	"context"
-	"fmt"
-	"time"
-)
-
-func main() {
-	fmt.Println("Multiple Tickers with Context")
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// 2つの Ticker を作成
-	ticker1 := time.NewTicker(1 * time.Second)
-	ticker2 := time.NewTicker(2 * time.Second)
-	defer ticker1.Stop()
-	defer ticker2.Stop()
-
-	// 5秒後にキャンセル
-	go func() {
-		time.Sleep(5 * time.Second)
-		fmt.Println("Cancelling context...")
-		cancel()
-	}()
-
-	for {
-		select {
-		case <-ctx.Done():
-			fmt.Println("Context cancelled. Stopping all tickers...")
-			return
-		case t := <-ticker1.C:
-			fmt.Println("Ticker1 at:", t)
-		case t := <-ticker2.C:
-			fmt.Println("Ticker2 at:", t)
-		}
-	}
-}
-```
-
-### **`context.WithDeadline()` を使った Ticker の停止**
-```go
-package main
-
-import (
-	"context"
-	"fmt"
-	"time"
-)
-
-func main() {
-	fmt.Println("Ticker with context deadline started")
-
-	// 今から 5 秒後の時刻を取得
-	deadline := time.Now().Add(5 * time.Second)
-	ctx, cancel := context.WithDeadline(context.Background(), deadline)
-	defer cancel()
-
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			fmt.Println("Deadline reached. Stopping ticker...")
-			return
-		case t := <-ticker.C:
-			fmt.Println("Tick at:", t)
-		}
-	}
-}
-```
+- **`recover()` を使ったエラーハンドリング**: `panic` が発生しても `recover()` で回復し、Ticker を再起動する。
 
 ## 実行方法
 
@@ -109,6 +32,7 @@ go run cmd/with_timeout/main.go  # context.WithTimeout() を使った Ticker
 go run cmd/with_cancel/main.go   # context.WithCancel() を使った Ticker
 go run cmd/multiple_tickers/main.go  # 複数の Ticker を context で制御
 go run cmd/with_deadline/main.go  # context.WithDeadline() を使った Ticker
+go run cmd/with_recover/main.go  # recover() を使ったエラーハンドリング付き Ticker
 ```
 
 ## 学習ポイント
@@ -122,8 +46,8 @@ go run cmd/with_deadline/main.go  # context.WithDeadline() を使った Ticker
 7. **`defer cancel()` を忘れずに呼ぶことで、適切に `context` のリソースを解放できる**
 8. **複数の `Ticker` を `context` で管理し、一括停止できるようにする**
 9. **`context.WithDeadline()` を使い、特定の時刻で `context` をキャンセルする**
+10. **`recover()` を使い、`panic` 発生後も `Ticker` を再起動し続ける**
 
 ## 作成者
 
 - **池田虎太郎** | [GitHub プロフィール](https://github.com/kotaroikeda-apl-dev)
-
