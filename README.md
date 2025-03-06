@@ -8,20 +8,6 @@
 
 `time.Ticker`は、指定した間隔ごとに時間を通知するチャンネル(`ticker.C`)を提供する Go の機能です。定期的な処理を実行する際に便利です。
 
-### 学んだポイント
-
-- **Ticker の作成**: `time.NewTicker(間隔)` で指定した間隔ごとに動作する Ticker を作成。
-- **Tick の受信**: `ticker.C` から定期的な時間イベントを取得。
-- **Ticker の停止**: `ticker.Stop()` を呼び出すことでリソースリークを防ぐ。
-- **`defer ticker.Stop()` の活用**: 関数終了時に確実に `ticker.Stop()` を実行。
-- **`select` を使ったチャンネル処理**: 複数のチャンネルを同時に監視し、どれかが準備完了すると処理を実行。
-- **`return` の影響**: `defer` は関数終了前に必ず実行されることを確認。
-- **`context.WithTimeout()` の活用**: 指定時間後に自動で `context` をキャンセル。
-- **`context.WithCancel()` の活用**: 外部のイベントで `context` を手動キャンセル。
-- **複数の `Ticker` を `context` で制御**: 複数の `Ticker` を一括管理する。
-- **`context.WithDeadline()` の活用**: 指定時刻になったら `context` をキャンセル。
-- **`recover()` を使ったエラーハンドリング**: `panic` が発生しても `recover()` で回復し、Ticker を再起動する。
-
 ## 実行方法
 
 ### コードを実行する
